@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#00f5ff">
+<title>J.A.R.V.I.S</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap');
+  :root { --cyan:#00f5ff;--blue:#0066ff;--red:#ff2244;--gold:#ffd700;--bg:#010a14;--panel:rgba(0,20,40,0.88);--glow:0 0 20px var(--cyan),0 0 60px rgba(0,245,255,0.2); }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;overscroll-behavior:none;}
+  body{background:var(--bg);font-family:'Share Tech Mono',monospace;color:var(--cyan);overflow:hidden;position:relative;user-select:none;}
+  body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,245,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,245,255,0.03) 1px,transparent 1px);background-size:40px 40px;animation:gridMove 20s linear infinite;z-index:0;}
+  @keyframes gridMove{0%{transform:perspective(500px) rotateX(10deg) translateY(0);}100%{transform:perspective(500px) rotateX(10deg) translateY(40px);}}
+  body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.12) 2px,rgba(0,0,0,0.12) 4px);pointer-events:none;z-index:100;}
+
+  /* ── Layout principal ── */
+  .app{position:relative;z-index:10;display:flex;flex-direction:column;height:100vh;height:100dvh;padding:14px;padding-top:max(18px,env(safe-area-inset-top));padding-bottom:max(10px,env(safe-area-inset-bottom));gap:0;}
+
+  /* ── Header ── */
+  .header{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(0,245,255,0.2);padding-bottom:9px;margin-bottom:10px;}
+  .logo{font-family:'Orbitron',sans-serif;font-size:1rem;font-weight:900;letter-spacing:.3em;text-shadow:var(--glow);}
+  .logo span{color:var(--gold);}
+  .status-bar{display:flex;gap:10px;align-items:center;font-size:.58rem;opacity:.7;}
+  .dot{width:6px;height:6px;border-radius:50%;background:var(--cyan);animation:pulse 2s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{opacity:1;box-shadow:0 0 6px var(--cyan);}50%{opacity:.3;box-shadow:none;}}
+
+  /* ── Tabs ── */
+  .tabs{display:flex;gap:6px;margin-bottom:10px;}
+  .tab{flex:1;padding:7px 4px;border:1px solid rgba(0,245,255,0.2);border-radius:4px;background:rgba(0,20,40,0.6);color:rgba(0,245,255,0.5);font-family:'Share Tech Mono',monospace;font-size:.58rem;letter-spacing:.1em;cursor:pointer;transition:all .2s;text-align:center;}
+  .tab.active{border-color:var(--cyan);color:var(--cyan);background:rgba(0,245,255,0.08);box-shadow:0 0 10px rgba(0,245,255,0.15);}
+
+  /* ── Tela HOME ── */
+  #screen-home{display:flex;flex-direction:column;align-items:center;gap:9px;flex:1;}
+  .reactor-section{display:flex;flex-direction:column;align-items:center;gap:6px;}
+  .reactor-wrap{position:relative;width:145px;height:145px;cursor:pointer;}
+  .reactor-ring{position:absolute;inset:0;border-radius:50%;border:2px solid transparent;animation:spin linear infinite;}
+  .ring1{border-top-color:var(--cyan);border-right-color:rgba(0,245,255,.2);animation-duration:3s;}
+  .ring2{inset:10px;border-bottom-color:var(--blue);border-left-color:rgba(0,102,255,.2);animation-duration:5s;animation-direction:reverse;}
+  .ring3{inset:22px;border-top-color:var(--cyan);border-right-color:rgba(0,245,255,.1);animation-duration:2s;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .reactor-core{position:absolute;inset:32px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#00aaff,#003399,#000820);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:3px;box-shadow:0 0 30px var(--cyan),0 0 80px rgba(0,245,255,.3),inset 0 0 20px rgba(0,0,0,.5);transition:all .3s ease;}
+  .reactor-core.listening{background:radial-gradient(circle at 35% 35%,#ff5555,#cc0022,#200010);box-shadow:0 0 30px var(--red),0 0 80px rgba(255,34,68,.4),inset 0 0 20px rgba(0,0,0,.5);animation:breathe .8s ease-in-out infinite;}
+  .reactor-core.thinking{background:radial-gradient(circle at 35% 35%,#ffd700,#cc8800,#201000);box-shadow:0 0 30px var(--gold),0 0 80px rgba(255,215,0,.4),inset 0 0 20px rgba(0,0,0,.5);}
+  @keyframes breathe{0%,100%{transform:scale(1);}50%{transform:scale(1.06);}}
+  .mic-icon{font-size:1.5rem;}.core-label{font-size:.48rem;letter-spacing:.15em;opacity:.7;}
+  .command-hint{font-size:.58rem;text-align:center;opacity:.5;max-width:190px;min-height:1em;}
+  .waveform{display:flex;align-items:center;justify-content:center;gap:3px;height:22px;opacity:0;transition:opacity .3s;}
+  .waveform.active{opacity:1;}
+  .wave-bar{width:3px;background:var(--red);border-radius:2px;animation:wave .6s ease-in-out infinite;}
+  @keyframes wave{0%,100%{height:4px;}50%{height:18px;}}
+  .wake-word{font-family:'Orbitron',sans-serif;font-size:.55rem;letter-spacing:.25em;opacity:.3;text-align:center;}
+
+  .log-panel{width:100%;flex:1;background:var(--panel);border:1px solid rgba(0,245,255,.15);border-radius:4px;padding:8px;display:flex;flex-direction:column;gap:4px;overflow-y:auto;backdrop-filter:blur(10px);}
+  .log-panel::-webkit-scrollbar{width:3px;}.log-panel::-webkit-scrollbar-thumb{background:var(--cyan);}
+  .panel-title{font-size:.55rem;letter-spacing:.2em;opacity:.3;border-bottom:1px solid rgba(0,245,255,.1);padding-bottom:4px;margin-bottom:2px;}
+
+  .controls-grid{width:100%;display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px;}
+  .ctrl-btn{background:rgba(0,20,40,.8);border:1px solid rgba(0,245,255,.2);color:var(--cyan);font-family:'Share Tech Mono',monospace;font-size:.55rem;letter-spacing:.06em;padding:8px 3px;border-radius:4px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;transition:all .2s;position:relative;overflow:hidden;}
+  .ctrl-btn::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,transparent 40%,rgba(0,245,255,.05));}
+  .ctrl-btn:active,.ctrl-btn.active{border-color:var(--cyan);background:rgba(0,245,255,.08);box-shadow:0 0 10px rgba(0,245,255,.2);transform:scale(.97);}
+  .ctrl-icon{font-size:1rem;}.ctrl-label{opacity:.7;text-align:center;line-height:1.2;}
+
+  /* ── Tela CHAT ── */
+  #screen-chat{display:none;flex-direction:column;flex:1;gap:8px;}
+  #screen-chat.active{display:flex;}
+  #screen-home.active{display:flex;}
+
+  .chat-messages{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:4px 2px;}
+  .chat-messages::-webkit-scrollbar{width:3px;}.chat-messages::-webkit-scrollbar-thumb{background:var(--cyan);}
+
+  .bubble{max-width:85%;padding:9px 12px;border-radius:6px;font-size:.7rem;line-height:1.6;animation:fadeIn .3s ease;}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;}}
+  .bubble.user{align-self:flex-end;background:rgba(0,102,255,0.18);border:1px solid rgba(0,102,255,0.4);color:rgba(255,255,255,0.9);border-bottom-right-radius:1px;}
+  .bubble.jarvis{align-self:flex-start;background:rgba(0,245,255,0.06);border:1px solid rgba(0,245,255,0.2);color:var(--cyan);border-bottom-left-radius:1px;}
+  .bubble.jarvis::before{content:'J › ';color:var(--blue);font-weight:bold;}
+  .bubble.typing{opacity:.6;}
+  .typing-dots span{display:inline-block;animation:blink 1s ease-in-out infinite;}
+  .typing-dots span:nth-child(2){animation-delay:.2s;}
+  .typing-dots span:nth-child(3){animation-delay:.4s;}
+  @keyframes blink{0%,100%{opacity:.2;}50%{opacity:1;}}
+
+  .chat-input-row{display:flex;gap:7px;align-items:center;}
+  .chat-input{flex:1;background:rgba(0,20,40,0.8);border:1px solid rgba(0,245,255,0.25);border-radius:4px;color:var(--cyan);font-family:'Share Tech Mono',monospace;font-size:.68rem;padding:9px 11px;outline:none;caret-color:var(--cyan);user-select:text;}
+  .chat-input::placeholder{color:rgba(0,245,255,0.25);}
+  .chat-input:focus{border-color:rgba(0,245,255,0.5);}
+  .send-btn,.voice-btn{background:rgba(0,20,40,0.8);border:1px solid rgba(0,245,255,0.25);color:var(--cyan);border-radius:4px;padding:9px 10px;cursor:pointer;font-size:.9rem;transition:all .2s;flex-shrink:0;}
+  .send-btn:active,.voice-btn:active{background:rgba(0,245,255,0.1);border-color:var(--cyan);}
+  .voice-btn.listening{background:rgba(255,34,68,0.1);border-color:var(--red);animation:breathe .8s ease-in-out infinite;}
+
+  /* ── Mensagens log (home) ── */
+  .message{font-size:.65rem;line-height:1.5;animation:fadeIn .3s ease;}
+  .message.user{color:rgba(255,255,255,.7);}.message.user::before{content:'▶ ';color:var(--gold);}
+  .message.jarvis{color:var(--cyan);}.message.jarvis::before{content:'J › ';color:var(--blue);font-weight:bold;}
+  .message.system{color:rgba(0,245,255,.35);font-size:.6rem;}
+
+  /* ── Notif ── */
+  .notif{position:fixed;top:16px;right:14px;background:rgba(0,20,40,.95);border:1px solid var(--cyan);border-radius:6px;padding:8px 12px;font-size:.62rem;color:var(--cyan);z-index:200;box-shadow:0 0 20px rgba(0,245,255,.2);animation:slideIn .3s ease,fadeOut .3s ease 2.7s forwards;max-width:200px;}
+  @keyframes slideIn{from{transform:translateX(20px);opacity:0;}}
+  @keyframes fadeOut{to{opacity:0;transform:translateX(10px);}}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">J.<span>A</span>.R.V.I.S</div>
+    <div class="status-bar"><div class="dot"></div><span id="statusText">ONLINE</span></div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('home')">🏠 CONTROLES</div>
+    <div class="tab" onclick="switchTab('chat')">🤖 IA CHAT</div>
+  </div>
+
+  <!-- ═══ TELA HOME ═══ -->
+  <div id="screen-home" class="active">
+
+    <div class="reactor-section">
+      <div class="reactor-wrap" onclick="toggleListen()">
+        <div class="reactor-ring ring1"></div>
+        <div class="reactor-ring ring2"></div>
+        <div class="reactor-ring ring3"></div>
+        <div class="reactor-core" id="reactorCore">
+          <div class="mic-icon">🎙️</div>
+          <div class="core-label" id="coreLabel">TOQUE</div>
+        </div>
+      </div>
+      <div class="waveform" id="waveform">
+        <div class="wave-bar" style="animation-delay:0s"></div>
+        <div class="wave-bar" style="animation-delay:.1s"></div>
+        <div class="wave-bar" style="animation-delay:.2s"></div>
+        <div class="wave-bar" style="animation-delay:.15s"></div>
+        <div class="wave-bar" style="animation-delay:.05s"></div>
+        <div class="wave-bar" style="animation-delay:.25s"></div>
+      </div>
+      <div class="wake-word">COMANDO DE VOZ</div>
+      <div class="command-hint" id="commandHint">Toque no núcleo para ativar</div>
+    </div>
+
+    <div class="log-panel" id="logPanel">
+      <div class="panel-title">▌ LOG DO SISTEMA</div>
+      <div class="message system">// Sistema iniciado. Diga um comando ou vá para IA CHAT.</div>
+    </div>
+
+    <div class="controls-grid">
+      <button class="ctrl-btn" id="btn-spotify"   onclick="openApp('spotify')">  <span class="ctrl-icon">🎵</span><span class="ctrl-label">SPOTIFY</span></button>
+      <button class="ctrl-btn" id="btn-whatsapp"  onclick="openApp('whatsapp')"> <span class="ctrl-icon">💬</span><span class="ctrl-label">WHATSAPP</span></button>
+      <button class="ctrl-btn" id="btn-youtube"   onclick="openApp('youtube')">  <span class="ctrl-icon">▶️</span><span class="ctrl-label">YOUTUBE</span></button>
+      <button class="ctrl-btn" id="btn-camera"    onclick="openApp('camera')">   <span class="ctrl-icon">📷</span><span class="ctrl-label">CÂMERA</span></button>
+      <button class="ctrl-btn" id="btn-maps"      onclick="openApp('maps')">     <span class="ctrl-icon">🗺️</span><span class="ctrl-label">MAPS</span></button>
+      <button class="ctrl-btn" id="btn-instagram" onclick="openApp('instagram')"><span class="ctrl-icon">📸</span><span class="ctrl-label">INSTAGRAM</span></button>
+      <button class="ctrl-btn" id="btn-torch"     onclick="doAction('torch')">   <span class="ctrl-icon">🔦</span><span class="ctrl-label">LANTERNA</span></button>
+      <button class="ctrl-btn" id="btn-battery"   onclick="doAction('battery')"> <span class="ctrl-icon">🔋</span><span class="ctrl-label">BATERIA</span></button>
+      <button class="ctrl-btn" id="btn-time"      onclick="doAction('time')">    <span class="ctrl-icon">🕐</span><span class="ctrl-label">HORÁRIO</span></button>
+    </div>
+
+  </div><!-- /home -->
+
+  <!-- ═══ TELA CHAT ═══ -->
+  <div id="screen-chat">
+
+    <div class="chat-messages" id="chatMessages">
+      <div class="bubble jarvis">Olá, Sr. Stark. Sou J.A.R.V.I.S — sua inteligência artificial pessoal. Pode me fazer qualquer pergunta, pedir análises, tirar dúvidas ou solicitar o que precisar. Estou à sua disposição.</div>
+    </div>
+
+    <div class="chat-input-row">
+      <button class="voice-btn" id="voiceChatBtn" onclick="toggleVoiceChat()" title="Voz">🎙️</button>
+      <input class="chat-input" id="chatInput" type="text" placeholder="Digite sua mensagem..." autocomplete="off"
+        onkeydown="if(event.key==='Enter')sendChat()">
+      <button class="send-btn" onclick="sendChat()">➤</button>
+    </div>
+
+  </div><!-- /chat -->
+
+</div><!-- /app -->
+
+<script>
+// ════════════════════════════════════════════════════
+//  ESTADO GLOBAL
+// ════════════════════════════════════════════════════
+let isListening = false, isChatListening = false;
+let recognition = null, chatRecognition = null;
+let torchOn = false, torchStream = null;
+let currentTab = 'home';
+
+// Histórico de mensagens para a IA (mantém contexto)
+let chatHistory = [];
+
+// TTS
+let speechSynth = ('speechSynthesis' in window) ? window.speechSynthesis : null;
+let ptVoice = null;
+function loadVoices() {
+  if (!speechSynth) return;
+  const v = speechSynth.getVoices();
+  ptVoice = v.find(x=>x.lang.startsWith('pt')) || v.find(x=>x.lang.startsWith('en')) || v[0] || null;
+}
+if (speechSynth) { if ('onvoiceschanged' in speechSynth) speechSynth.onvoiceschanged=loadVoices; loadVoices(); }
+
+function speak(text) {
+  if (!speechSynth) return;
+  try {
+    speechSynth.cancel();
+    if (!ptVoice) loadVoices();
+    const u = new SpeechSynthesisUtterance(text);
+    if (ptVoice) u.voice = ptVoice;
+    u.lang='pt-BR'; u.rate=0.93; u.pitch=0.82;
+    speechSynth.speak(u);
+  } catch(e) { console.warn(e); }
+}
+
+// ════════════════════════════════════════════════════
+//  TABS
+// ════════════════════════════════════════════════════
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active', (i===0&&tab==='home')||(i===1&&tab==='chat')));
+  document.getElementById('screen-home').classList.toggle('active', tab==='home');
+  document.getElementById('screen-chat').classList.toggle('active', tab==='chat');
+  if (tab==='chat') setTimeout(()=>document.getElementById('chatInput').focus(), 100);
+}
+
+// ════════════════════════════════════════════════════
+//  CHAT IA — com histórico completo
+// ════════════════════════════════════════════════════
+async function sendChat() {
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+
+  addChatBubble('user', text);
+  chatHistory.push({ role: 'user', content: text });
+
+  // Typing indicator
+  const typingId = addTypingBubble();
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: `Você é J.A.R.V.I.S (Just A Rather Very Intelligent System), o assistente de IA pessoal do Tony Stark / do usuário deste app. Características:
+- Tom: profissional, inteligente, levemente irônico e sofisticado — como o JARVIS dos filmes
+- Idioma: sempre português do Brasil
+- Você pode responder perguntas, dar conselhos, fazer análises, tirar dúvidas, ajudar com tarefas, fazer cálculos, explicar conceitos etc.
+- Respostas: concisas mas completas. Use no máximo 4-5 frases, exceto quando o usuário pedir explicações detalhadas
+- Nunca mencione Claude, Anthropic ou que é uma IA genérica — você é J.A.R.V.I.S
+- Trate o usuário como "Sr. Stark" ocasionalmente para manter o personagem`,
+        messages: chatHistory
+      })
+    });
+    const data = await res.json();
+    const reply = data.content?.[0]?.text || 'Não consegui processar sua solicitação, Sr. Stark.';
+
+    removeTypingBubble(typingId);
+    addChatBubble('jarvis', reply);
+    chatHistory.push({ role: 'assistant', content: reply });
+
+    // Fala a resposta se a aba de chat estiver ativa
+    speak(reply);
+
+    // Limita histórico a 20 mensagens para não explodir o contexto
+    if (chatHistory.length > 20) chatHistory = chatHistory.slice(-20);
+
+  } catch(e) {
+    removeTypingBubble(typingId);
+    const errMsg = 'Falha na conexão com o servidor de IA, Sr. Stark.';
+    addChatBubble('jarvis', errMsg);
+    speak(errMsg);
+  }
+}
+
+function addChatBubble(role, text) {
+  const container = document.getElementById('chatMessages');
+  const b = document.createElement('div');
+  b.className = `bubble ${role}`;
+  b.textContent = text;
+  container.appendChild(b);
+  container.scrollTop = container.scrollHeight;
+  return b;
+}
+
+function addTypingBubble() {
+  const container = document.getElementById('chatMessages');
+  const id = 'typing-' + Date.now();
+  const b = document.createElement('div');
+  b.className = 'bubble jarvis typing';
+  b.id = id;
+  b.innerHTML = '<span class="typing-dots"><span>●</span><span>●</span><span>●</span></span>';
+  container.appendChild(b);
+  container.scrollTop = container.scrollHeight;
+  return id;
+}
+
+function removeTypingBubble(id) {
+  const el = document.getElementById(id);
+  if (el) el.remove();
+}
+
+// ════════════════════════════════════════════════════
+//  VOZ NO CHAT
+// ════════════════════════════════════════════════════
+function toggleVoiceChat() {
+  isChatListening ? stopVoiceChat() : startVoiceChat();
+}
+
+async function startVoiceChat() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { addChatBubble('jarvis','Reconhecimento de voz indisponível neste dispositivo.'); return; }
+  try {
+    const s = await navigator.mediaDevices.getUserMedia({ audio: true });
+    s.getTracks().forEach(t=>t.stop());
+  } catch { addChatBubble('jarvis','Permissão de microfone negada.'); return; }
+
+  chatRecognition = new SR();
+  chatRecognition.lang='pt-BR'; chatRecognition.continuous=false;
+  chatRecognition.interimResults=true; chatRecognition.maxAlternatives=1;
+
+  chatRecognition.onstart = () => {
+    isChatListening = true;
+    document.getElementById('voiceChatBtn').classList.add('listening');
+    document.getElementById('voiceChatBtn').textContent = '⏹️';
+  };
+  chatRecognition.onresult = e => {
+    const last = e.results[e.results.length-1];
+    const t = last[0].transcript;
+    document.getElementById('chatInput').value = t;
+    if (last.isFinal) { stopVoiceChat(); sendChat(); }
+  };
+  chatRecognition.onerror = () => stopVoiceChat();
+  chatRecognition.onend = () => stopVoiceChat();
+  chatRecognition.start();
+}
+
+function stopVoiceChat() {
+  isChatListening = false;
+  if (chatRecognition) { chatRecognition.abort(); chatRecognition = null; }
+  const btn = document.getElementById('voiceChatBtn');
+  btn.classList.remove('listening');
+  btn.textContent = '🎙️';
+}
+
+// ════════════════════════════════════════════════════
+//  VOZ NA HOME (comandos)
+// ════════════════════════════════════════════════════
+function toggleListen() { isListening ? stopListening() : startListening(); }
+
+async function startListening() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { logMsg('system','// Reconhecimento de voz indisponível.'); return; }
+  try { const s=await navigator.mediaDevices.getUserMedia({audio:true}); s.getTracks().forEach(t=>t.stop()); }
+  catch { logMsg('system','// Permissão de microfone negada.'); setUI('idle'); return; }
+
+  recognition = new SR();
+  recognition.lang='pt-BR'; recognition.continuous=false;
+  recognition.interimResults=true; recognition.maxAlternatives=1;
+
+  recognition.onstart = ()=>{ isListening=true; setUI('listening'); };
+  recognition.onresult = e=>{
+    const last=e.results[e.results.length-1];
+    const t=last[0].transcript.toLowerCase().trim();
+    document.getElementById('commandHint').textContent=t;
+    if (last.isFinal) { processVoiceCommand(t); stopListening(); }
+  };
+  recognition.onerror = e=>{ stopListening(); if(e.error!=='aborted') logMsg('system',`// Erro: ${e.error}`); };
+  recognition.onend = ()=>{ if(isListening) stopListening(); };
+  try { recognition.start(); } catch(e) { stopListening(); }
+}
+
+function stopListening() {
+  isListening=false;
+  if (recognition) { recognition.abort(); recognition=null; }
+  setUI('idle');
+}
+
+function setUI(state) {
+  const core=document.getElementById('reactorCore');
+  const wave=document.getElementById('waveform');
+  const label=document.getElementById('coreLabel');
+  core.className='reactor-core '+(state==='idle'?'':state);
+  if (state==='listening') { wave.classList.add('active'); label.textContent='OUVINDO'; document.getElementById('commandHint').textContent='...'; document.getElementById('statusText').textContent='OUVINDO'; }
+  else if (state==='thinking') { wave.classList.remove('active'); label.textContent='PENSANDO'; document.getElementById('statusText').textContent='PROCESSANDO'; }
+  else { wave.classList.remove('active'); label.textContent='TOQUE'; document.getElementById('commandHint').textContent='Toque no núcleo para ativar'; document.getElementById('statusText').textContent='ONLINE'; }
+}
+
+function logMsg(type, text) {
+  const p=document.getElementById('logPanel');
+  const m=document.createElement('div'); m.className=`message ${type}`; m.textContent=text;
+  p.appendChild(m); p.scrollTop=p.scrollHeight;
+}
+
+// ════════════════════════════════════════════════════
+//  COMANDOS DE VOZ
+// ════════════════════════════════════════════════════
+function processVoiceCommand(cmd) {
+  logMsg('user', cmd); setUI('thinking');
+  const l = cmd.toLowerCase();
+
+  if (l.includes('spotify')||l.includes('música'))    { setTimeout(()=>openApp('spotify'),300); return; }
+  if (l.includes('whatsapp'))                          { setTimeout(()=>openApp('whatsapp'),300); return; }
+  if (l.includes('youtube'))                           { setTimeout(()=>openApp('youtube'),300); return; }
+  if (l.includes('câmera')||l.includes('foto'))        { setTimeout(()=>openApp('camera'),300); return; }
+  if (l.includes('maps')||l.includes('mapa'))          { setTimeout(()=>openApp('maps'),300); return; }
+  if (l.includes('instagram'))                         { setTimeout(()=>openApp('instagram'),300); return; }
+  if (l.includes('telegram'))                          { setTimeout(()=>openApp('telegram'),300); return; }
+  if (l.includes('lanterna')||l.includes('luz'))       { setTimeout(()=>doAction('torch'),300); return; }
+  if (l.includes('bateria')||l.includes('energia'))    { setTimeout(()=>doAction('battery'),300); return; }
+  if (l.includes('vibrar'))                            { setTimeout(()=>doAction('vibrate'),300); return; }
+  if (l.includes('hora')||l.includes('horas'))         { setTimeout(()=>doAction('time'),300); return; }
+
+  // Qualquer outra coisa → manda pro chat com IA
+  setTimeout(()=>{
+    setUI('idle');
+    logMsg('jarvis','Encaminhando para IA...');
+    // Injeta no chat e envia
+    chatHistory.push({role:'user',content:cmd});
+    addChatBubble('user',cmd);
+    switchTab('chat');
+    fetchJarvisReply(cmd);
+  },300);
+}
+
+async function fetchJarvisReply(userMsg) {
+  const typingId = addTypingBubble();
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model:'claude-sonnet-4-20250514', max_tokens:1000,
+        system:`Você é J.A.R.V.I.S, assistente do Tony Stark. Responda em português do Brasil, tom profissional e levemente irônico. Seja útil e completo. Nunca mencione Claude ou Anthropic.`,
+        messages: chatHistory
+      })
+    });
+    const data = await res.json();
+    const reply = data.content?.[0]?.text || 'Não consegui processar.';
+    removeTypingBubble(typingId);
+    addChatBubble('jarvis', reply);
+    chatHistory.push({role:'assistant',content:reply});
+    speak(reply);
+    if (chatHistory.length>20) chatHistory=chatHistory.slice(-20);
+  } catch {
+    removeTypingBubble(typingId);
+    addChatBubble('jarvis','Falha na conexão, Sr. Stark.');
+  }
+}
+
+// ════════════════════════════════════════════════════
+//  APPS
+// ════════════════════════════════════════════════════
+const APP_LINKS = {
+  spotify:   'spotify://',
+  whatsapp:  'whatsapp://',
+  youtube:   'vnd.youtube://',
+  camera:    'intent://capture/#Intent;scheme=android-app;package=com.android.camera;end',
+  maps:      'geo:0,0',
+  instagram: 'instagram://',
+  telegram:  'tg://',
+};
+
+function openApp(key) {
+  flashBtn(key);
+  showNotif(`📱 Abrindo ${key}...`);
+  logMsg('jarvis',`Abrindo ${key}, Sr. Stark.`);
+  speak(`Abrindo ${key}.`);
+  setUI('idle');
+  window.location.href = APP_LINKS[key] || '#';
+}
+
+// ════════════════════════════════════════════════════
+//  AÇÕES DO DISPOSITIVO
+// ════════════════════════════════════════════════════
+async function doAction(action) {
+  setUI('thinking');
+  setTimeout(()=>setUI('idle'),1200);
+  switch(action) {
+    case 'torch':
+      flashBtn('torch');
+      try {
+        if (!torchOn) {
+          torchStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+          const track=torchStream.getVideoTracks()[0];
+          const caps=track.getCapabilities?track.getCapabilities():{};
+          if (caps.torch) { await track.applyConstraints({advanced:[{torch:true}]}); torchOn=true; logMsg('jarvis','Lanterna ativada.'); speak('Lanterna ativada.'); showNotif('🔦 ON'); }
+          else { torchStream.getTracks().forEach(t=>t.stop()); torchStream=null; logMsg('jarvis','Lanterna não suportada.'); }
+        } else {
+          if (torchStream) { torchStream.getTracks().forEach(t=>t.stop()); torchStream=null; }
+          torchOn=false; logMsg('jarvis','Lanterna desativada.'); speak('Lanterna desativada.'); showNotif('🔦 OFF');
+        }
+      } catch { logMsg('jarvis','Não foi possível acessar a lanterna.'); }
+      break;
+    case 'battery':
+      flashBtn('battery');
+      if ('getBattery' in navigator) {
+        const bat=await navigator.getBattery();
+        const pct=Math.round(bat.level*100);
+        const ch=bat.charging?'carregando':'descarregando';
+        const msg=`Bateria em ${pct} por cento, ${ch}, Sr. Stark.`;
+        logMsg('jarvis',msg); speak(msg); showNotif(`🔋 ${pct}%`);
+      } else { logMsg('jarvis','API de bateria indisponível.'); }
+      break;
+    case 'vibrate':
+      flashBtn('vibrate');
+      if ('vibrate' in navigator) { navigator.vibrate([200,100,200,100,400]); logMsg('jarvis','Vibração executada.'); showNotif('📳'); }
+      break;
+    case 'time':
+      flashBtn('time');
+      const now=new Date();
+      const hh=now.getHours().toString().padStart(2,'0');
+      const mm=now.getMinutes().toString().padStart(2,'0');
+      const days=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
+      const msg=`São ${hh} horas e ${mm} minutos. ${days[now.getDay()]}.`;
+      logMsg('jarvis',msg); speak(msg); showNotif(`🕐 ${hh}:${mm}`);
+      break;
+  }
+}
+
+// ════════════════════════════════════════════════════
+//  UTILS
+// ════════════════════════════════════════════════════
+function flashBtn(id) {
+  const b=document.getElementById(`btn-${id}`); if(!b) return;
+  b.classList.add('active'); setTimeout(()=>b.classList.remove('active'),600);
+}
+function showNotif(text) {
+  document.querySelectorAll('.notif').forEach(n=>n.remove());
+  const n=document.createElement('div'); n.className='notif'; n.textContent=text;
+  document.body.appendChild(n); setTimeout(()=>n.remove(),3200);
+}
+
+window.addEventListener('DOMContentLoaded',()=>{
+  setTimeout(()=>{ logMsg('system','// Todos os sistemas online. Aguardando ordens.'); },600);
+});
+</script>
+</body>
+</html>
